@@ -1,0 +1,193 @@
+{
+  "_notice": "FICTIONAL DEMO DATA. No real people, places, systems or events. Blind-test case; expectations live in docs/blind-test.md.",
+  "case": {
+    "id": "CASE-002",
+    "title": "Server room access review",
+    "description": "The server-room door was opened outside the approved maintenance window. Five evidence items collected for review.",
+    "incident_start": "2026-10-12T02:00:00+01:00",
+    "incident_end": "2026-10-12T03:00:00+01:00",
+    "status": "active",
+    "fictional": true
+  },
+  "ingested_at": "2026-10-12T08:00:00Z",
+  "evidence": [
+    {
+      "id": "E-01",
+      "type": "csv",
+      "source_name": "Server-room door access log",
+      "original_filename": "E-01_server_room_access_log.csv",
+      "file": "E-01_server_room_access_log.csv",
+      "authoritative_for": ["DOOR_OPEN", "DOOR_CLOSE"],
+      "clock": {"offset_seconds": 0, "method": "reference_clock", "note": "Access controller on NTP"}
+    },
+    {
+      "id": "E-02",
+      "type": "csv",
+      "source_name": "Security console export",
+      "original_filename": "E-02_security_console_export.csv",
+      "file": "E-02_security_console_export.csv",
+      "clock": {"offset_seconds": 0, "method": "reference_clock", "note": "Console exports stamped from the NTP reference"}
+    },
+    {
+      "id": "E-03",
+      "type": "video",
+      "source_name": "Corridor camera",
+      "original_filename": "corridor_cam_0214.mp4",
+      "clock": {
+        "offset_seconds": -90,
+        "method": "declared_in_fixture_metadata",
+        "note": "Seeded blind-test assumption: camera clock runs 90 s slow against the NTP reference."
+      }
+    },
+    {
+      "id": "E-04",
+      "type": "audio",
+      "source_name": "Cabinet-door alarm audio",
+      "original_filename": "cabinet_alarm_0223.wav",
+      "clock": {"offset_seconds": 0, "method": "reference_clock", "note": "Alarm panel on NTP"}
+    },
+    {
+      "id": "E-05",
+      "type": "pdf",
+      "source_name": "Duty technician statement",
+      "original_filename": "technician_statement.pdf",
+      "clock": {"offset_seconds": 0, "method": "approximate_human_estimate", "note": "Times are the technician's estimates"}
+    }
+  ],
+  "event_ids": {
+    "E-01:3": "EV-001",
+    "E-01:4": "EV-002",
+    "E-01:5": "EV-003",
+    "E-01:6": "EV-004",
+    "E-01:7": "EV-005",
+    "E-01:8": "EV-006",
+    "E-01:9": "EV-007",
+    "E-01:10": "EV-008",
+    "E-02:1": "EV-009",
+    "E-02:2": "EV-010",
+    "E-02:3": "EV-011"
+  },
+  "row_descriptions": {
+    "DOOR_OPEN": "{door} door opens (badge {badge_id})",
+    "DOOR_CLOSE": "{door} door closes (badge {badge_id})"
+  },
+  "metadata_events": [
+    {
+      "id": "EV-012",
+      "evidence_id": "E-03",
+      "locator": "timecode 00:31",
+      "description": "Person enters the server corridor",
+      "source_time": "2026-10-12T02:14:30+01:00"
+    },
+    {
+      "id": "EV-013",
+      "evidence_id": "E-04",
+      "locator": "timecode 00:00:48",
+      "description": "Cabinet-door alarm sounds",
+      "source_time": "2026-10-12T02:23:10+01:00",
+      "interpretation": true
+    },
+    {
+      "id": "EV-014",
+      "evidence_id": "E-05",
+      "locator": "page 1, para 4",
+      "description": "Duty technician reports hearing the cabinet alarm around 02:30",
+      "source_time": "2026-10-12T02:30:00+01:00",
+      "approximate_seconds": 180
+    }
+  ],
+  "claims": [
+    {
+      "id": "CL-01",
+      "statement": "The server-room door opened at 02:22:00",
+      "state": "supported",
+      "rationale": "Recorded directly in the access log; no cited source conflicts.",
+      "links": [{"evidence_id": "E-01", "locator": "row 6", "relationship": "supports"}]
+    },
+    {
+      "id": "CL-02",
+      "statement": "A person entered the server corridor at 02:16:00",
+      "state": "supported",
+      "rationale": "Recorded on E-03; time normalized for the declared 90 s slow clock.",
+      "links": [{"evidence_id": "E-03", "locator": "timecode 00:31", "relationship": "supports"}]
+    },
+    {
+      "id": "CL-03",
+      "statement": "The 02:23 alarm came from the server-room cabinet door",
+      "state": "inferred",
+      "rationale": "The alarm audio does not name the door; the link relies on E-04 and E-01 together.",
+      "links": [
+        {"evidence_id": "E-04", "locator": "timecode 00:00:48", "relationship": "supports"},
+        {"evidence_id": "E-01", "locator": "row 6", "relationship": "supports"}
+      ]
+    },
+    {
+      "id": "CL-04",
+      "kind": "identity",
+      "statement": "The person in E-03 is the holder of badge B-217",
+      "state": "unresolved",
+      "rationale": "No source links the person on camera to a badge.",
+      "links": []
+    },
+    {
+      "id": "CL-05",
+      "statement": "A server-room door opening happened at 02:07:15",
+      "state": "contradicted",
+      "rationale": "Only the copied row in E-02 records it; the access controller and the corridor camera conflict.",
+      "links": [
+        {"evidence_id": "E-02", "locator": "row 1", "relationship": "supports"},
+        {"evidence_id": "E-01", "locator": "row 6", "relationship": "contradicts"},
+        {"evidence_id": "E-03", "locator": "timecode 00:31", "relationship": "contradicts"}
+      ]
+    },
+    {
+      "id": "CL-06",
+      "statement": "The cabinet was accessed during the alarm",
+      "state": "unresolved",
+      "rationale": "The alarm records a sound, not whether the cabinet was opened.",
+      "links": []
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H-01",
+      "conflict_id": "C-01",
+      "question": "Why does E-02 record a server-room opening at 02:07:15?",
+      "description": "The copied row is an import artifact",
+      "state": "inferred",
+      "notes": "Field-for-field match with E-01 row 6 except the time; export job log not available.",
+      "links": [
+        {"evidence_id": "E-02", "locator": "row 1", "relationship": "supports"},
+        {"evidence_id": "E-01", "locator": "row 6", "relationship": "supports"}
+      ]
+    },
+    {
+      "id": "H-02",
+      "conflict_id": "C-01",
+      "question": "Why does E-02 record a server-room opening at 02:07:15?",
+      "description": "The copied row was edited after export",
+      "state": "unresolved",
+      "notes": "E-02 has no edit history; this can be neither confirmed nor ruled out.",
+      "links": []
+    },
+    {
+      "id": "H-03",
+      "conflict_id": "C-01",
+      "question": "Why does E-02 record a server-room opening at 02:07:15?",
+      "description": "A genuine second server-room opening at 02:07",
+      "state": "contradicted",
+      "notes": "E-01 has no 02:07 row; E-03 shows no one enters before 02:16.",
+      "links": [
+        {"evidence_id": "E-01", "locator": "row 6", "relationship": "contradicts"},
+        {"evidence_id": "E-03", "locator": "timecode 00:31", "relationship": "contradicts"}
+      ]
+    }
+  ],
+  "audit": [
+    {"at": "2026-10-12T08:00:00Z", "actor": "AA", "action": "Case created", "entity_ref": "CASE-002", "details": "Fictional blind-test case"},
+    {"at": "2026-10-12T08:04:12Z", "actor": "AA", "action": "Evidence ingested", "entity_ref": "E-01", "details": "E-01_server_room_access_log.csv"},
+    {"at": "2026-10-12T08:09:38Z", "actor": "AA", "action": "Time assumption recorded", "entity_ref": "E-03", "details": "Corridor camera offset -90 s (declared, slow)"},
+    {"at": "2026-10-12T08:15:51Z", "actor": "SYS", "action": "Conflict created", "entity_ref": "C-01", "details": "RULE-DUP-001"},
+    {"at": "2026-10-12T08:21:07Z", "actor": "AA", "action": "Evidence ingested", "entity_ref": "E-05", "details": "technician_statement.pdf"}
+  ]
+}
