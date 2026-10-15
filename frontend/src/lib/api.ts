@@ -7,6 +7,8 @@ import type {
   Conflict,
   EvidenceItem,
   Hypothesis,
+  NewCase,
+  NewReview,
   OriginalRecord,
   StagedItem,
   TimelineEvent,
@@ -24,8 +26,13 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, method: "GET" | "POST" = "GET"): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { method, cache: "no-store" });
+async function request<T>(path: string, method: "GET" | "POST" = "GET", body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    cache: "no-store",
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
     throw new ApiError(
@@ -52,8 +59,11 @@ export const api = {
   changes: (id: string) => get<ChangeSummary[]>(`/api/cases/${id}/changes`),
   addStaged: (id: string, evidenceId: string) =>
     request<ChangeSummary>(`/api/cases/${id}/staged/${evidenceId}`, "POST"),
+  createReview: (id: string, body: NewReview) =>
+    request<Conflict | Hypothesis>(`/api/cases/${id}/reviews`, "POST", body),
+  createCase: (body: NewCase) => request<CaseSummary>("/api/cases", "POST", body),
   resetDemo: () => request<{ status: string }>("/api/demo/reset", "POST"),
-  /** Whether the report export endpoint is implemented (it returns 501 until it is). */
+  /** Whether the report export endpoint answers; false when the API is down or it 501s. */
   reportAvailable: async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`${BASE}/api/cases/${id}/report?format=json`, { cache: "no-store" });

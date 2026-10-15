@@ -20,6 +20,8 @@ from app.models.domain import (
     Event,
     EvidenceItem,
     Hypothesis,
+    ReviewCreate,
+    ReviewNote,
     ReviewStatus,
     StagedItem,
 )
@@ -41,9 +43,33 @@ class CaseData:
         self.files = seed.files
         self.authoritative_for = seed.authoritative_for
         self.changes: list[ChangeSummary] = []
+        self.conflict_reviews: dict[str, list[ReviewNote]] = {}
         self.events: list[Event] = []
         self.conflicts: list[Conflict] = []
         self._analyze(seed.events)
+
+    @classmethod
+    def blank(cls, case: Case, created_at: str) -> CaseData:
+        """An empty case created by an investigator; evidence is added later."""
+        data = cls.__new__(cls)
+        data.seed_name = ""
+        data.case = case
+        data.evidence, data.claims, data.hypotheses = [], [], []
+        data.files, data.authoritative_for, data.changes = {}, {}, []
+        data.conflict_reviews = {}
+        data.events, data.conflicts = [], []
+        data.audit = [
+            AuditEvent(
+                id="A-001",
+                case_id=case.id,
+                at=created_at,
+                actor="BJ",
+                action="Case created",
+                entity_ref=case.id,
+                details=case.title,
+            )
+        ]
+        return data
 
     def _analyze(self, events: list[Event]) -> None:
         """Run every rule over the current evidence. Deterministic for the same inputs."""
@@ -63,10 +89,43 @@ class CaseData:
             Conflict(id=f"C-{i:02d}", case_id=self.case.id, **f.__dict__)
             for i, f in enumerate(findings, 1)
         ]
+        # Human decisions survive re-analysis: re-attach them by what the rule found.
+        for c in self.conflicts:
+            c.reviews = list(self.conflict_reviews.get(self._conflict_key(c), []))
+            decided = [r.status for r in c.reviews if r.status is not None]
+            if decided:
+                c.status = decided[-1]
+
+    @staticmethod
+    def _conflict_key(c: Conflict) -> str:
+        ids = ",".join(c.evidence_ids + c.event_ids)
+        return f"{c.rule_id}|{ids or c.explanation}"
+
+    def review(self, body: ReviewCreate, at: str) -> Conflict | Hypothesis:
+        """Record a reviewer decision. Raises LookupError or ValueError on bad input."""
+        note = ReviewNote(actor=body.actor, at=at, note=body.note.strip(), status=body.status)
+        if body.target_id.startswith("C-"):
+            conflict = next((c for c in self.conflicts if c.id == body.target_id), None)
+            if conflict is None:
+                raise LookupError(body.target_id)
+            self.conflict_reviews.setdefault(self._conflict_key(conflict), []).append(note)
+            conflict.reviews.append(note)
+            if body.status is not None:
+                conflict.status = body.status
+            return conflict
+        hypothesis = next((h for h in self.hypotheses if h.id == body.target_id), None)
+        if hypothesis is None:
+            raise LookupError(body.target_id)
+        if body.status is not None:
+            raise ValueError("Hypotheses take notes only; their state comes from the evidence.")
+        hypothesis.reviews.append(note)
+        return hypothesis
 
     def staged(self) -> list[StagedItem]:
         present = {e.id for e in self.evidence}
         items = []
+        if not self.seed_name:
+            return items
         for evidence_id in staged_ids(self.seed_name):
             if evidence_id in present:
                 continue
@@ -161,6 +220,21 @@ class Store:
         for name in SEEDS:
             data = CaseData(name)
             self.cases[data.case.id] = data
+
+    def create_case(self, title: str, description: str, start: str, end: str) -> CaseData:
+        number = max(int(cid.split("-")[1]) for cid in self.cases) + 1 if self.cases else 1
+        case = Case(
+            id=f"CASE-{number:03d}",
+            title=title,
+            description=description,
+            incident_start=start,
+            incident_end=end,
+            status="open",
+            fictional=False,
+        )
+        data = CaseData.blank(case, self.now())
+        self.cases[case.id] = data
+        return data
 
     @staticmethod
     def now() -> str:

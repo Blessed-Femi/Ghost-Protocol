@@ -12,6 +12,13 @@ export interface Case {
   fictional: boolean;
 }
 
+export interface NewCase {
+  title: string;
+  description: string;
+  incident_start: string;
+  incident_end: string;
+}
+
 export interface CaseSummary {
   case: Case;
   evidence_count: number;
@@ -50,6 +57,15 @@ export interface TimelineEvent {
   record: Record<string, string>;
 }
 
+export type ReviewStatus = "open" | "under_review" | "resolved" | "dismissed";
+
+export interface ReviewNote {
+  actor: string;
+  at: string;
+  note: string;
+  status: ReviewStatus | null;
+}
+
 export interface Conflict {
   id: string;
   case_id: string;
@@ -61,8 +77,9 @@ export interface Conflict {
   explanation: string;
   detection_method: string;
   uncertain: string;
-  status: "open" | "under_review" | "resolved" | "dismissed";
+  status: ReviewStatus;
   requires_human_review: boolean;
+  reviews: ReviewNote[];
 }
 
 export interface EvidenceLink {
@@ -91,6 +108,7 @@ export interface Hypothesis {
   state: ClaimState;
   notes: string;
   links: EvidenceLink[];
+  reviews: ReviewNote[];
 }
 
 export interface AuditEvent {
@@ -109,6 +127,12 @@ export interface OriginalRecord {
   sha256: string | null;
   columns: string[];
   rows: Record<string, string>[];
+}
+
+export interface NewReview {
+  target_id: string;
+  note: string;
+  status?: ReviewStatus;
 }
 
 export interface StagedItem {
